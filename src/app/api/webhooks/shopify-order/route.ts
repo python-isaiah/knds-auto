@@ -2,56 +2,81 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const shopifyOrder = await request.json();
+    const { lineItems } = await request.json();
 
-    // 1. Extract necessary data from Shopify payload
-    const orderNumber = shopifyOrder.order_number || shopifyOrder.id;
-    const customerEmail = shopifyOrder.email;
-    const shippingAddress = shopifyOrder.shipping_address;
-    const firstItem = shopifyOrder.line_items?.[0];
+    // Modern Shopify Storefront Cart Creation Mutation Payload
+    const mutation = `
+      mutation cartCreate($input: CartInput!) {
+        cartCreate(input: $input) {
+          cart {
+            id
+            checkoutUrl
+          }
+          userErrors {
+            code
+            field
+            message
+          }
+        }
+      }
+    `;
 
-    if (!shippingAddress || !firstItem) {
-      return NextResponse.json({ error: "Missing vital order data" }, { status: 400 });
-    }
+    // Connect using your secure public environment variables
+    const shopifyUrl = `https://${process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN}/api/2024-01/graphql.json`;
 
-    // 2. Map payload into a "Blind Shipping" format for the supplier's API
-    const supplierPayload = {
-      external_order_id: `KNDS-${orderNumber}`,
-      sku: firstItem.sku || "STANDARD-CARBON-CORE",
-      quantity: firstItem.quantity || 1,
-      shipping_destination: {
-        consignee_name: shippingAddress.name,
-        address_line1: shippingAddress.address1,
-        address_line2: shippingAddress.address2 || "",
-        city: shippingAddress.city,
-        state_province: shippingAddress.province,
-        postal_code: shippingAddress.zip,
-        country_code: shippingAddress.country_code,
-        phone: shippingAddress.phone || ""
-      },
-      // CRITICAL WHITE-LABEL RULE FOR THE SUPPLIER
-      fulfillment_instructions: "BLIND SHIP ONLY. REMOVE ALL CHINESE INVOICES, PRICE TAGS, LOGOS, OR CARDS. USE US-SPEC DISPATCH PACKAGING."
-    };
+    // Map your line items to match the modern 'merchandiseId' format Shopify expects
+    const formattedLines = lineItems.map((item: any) => ({
+      merchandiseId: item.variantId, // Shopify expects the variant GID here
+      quantity: item.quantity || 1,
+    }));
 
-    // 3. Forward to Supplier API (or automation middleware like Make/Zapier)
-    // Replace with your supplier's actual API endpoint when ready
-    const supplierResponse = await fetch("https://api.fulfillment-partner.com/v1/orders", {
+    const response = await fetch(shopifyUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.SUPPLIER_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-Shopify-Storefront-Access-Token": String(
+          process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN,
+        ),
       },
-      body: JSON.stringify(supplierPayload)
+      body: JSON.stringify({
+        query: mutation,
+        variables: {
+          input: {
+            lines: formattedLines,
+          },
+        },
+      }),
     });
 
-    if (!supplierResponse.ok) {
-      console.error("Supplier routing failed:", await supplierResponse.text());
-      // We still return a 200 to Shopify so it doesn't spam retries, but we log the error internally
+    const result = await response.json();
+
+    // Print raw payload directly into your local terminal console for verification
+    console.log("=== RAW SHOPIFY CART API RESPONSE ===");
+    console.log(JSON.stringify(result, null, 2));
+    console.log("=====================================");
+
+    // Check for top-level GraphQL query system errors
+    if (result?.errors && result.errors.length > 0) {
+      return NextResponse.json(
+        { error: result.errors[0].message },
+        { status: 400 },
+      );
     }
 
-    return NextResponse.json({ success: true, logged_order: orderNumber });
+    const cartData = result?.data?.cartCreate?.cart;
+    const userErrors = result?.data?.cartCreate?.userErrors;
+
+    // Check for validation errors (e.g. invalid variant IDs)
+    if (userErrors && userErrors.length > 0) {
+      return NextResponse.json(
+        { error: userErrors[0].message },
+        { status: 400 },
+      );
+    }
+
+    // Return the modern checkoutUrl back to your front-end script
+    return NextResponse.json({ checkoutUrl: cartData?.checkoutUrl });
   } catch (error: any) {
-    console.error("Webhook Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

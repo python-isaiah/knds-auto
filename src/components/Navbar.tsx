@@ -11,11 +11,16 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 w-full z-[100] border-b border-white/5 bg-black/40 backdrop-blur-xl transition-all duration-500">
       <div className="max-w-7xl mx-auto px-10 h-20 flex items-center justify-between">
+        
+        {/* Brand Core Logo */}
         <Link href="/" className="text-2xl font-black tracking-tighter uppercase italic group">
           KNDS<span className="text-zinc-500 font-light group-hover:text-white transition-colors">AUTO</span>
         </Link>
         
-        <div className="hidden md:flex gap-12 text-[10px] font-bold tracking-[0.4em] uppercase">
+        {/* Navigation Anchors Array */}
+        <div className="hidden md:flex gap-12 text-[10px] font-bold tracking-[0.4em] uppercase items-center">
+          
+          {/* Mega Dropdown Hover System for Collection */}
           <div className="group relative py-8">
             <span className="text-white cursor-pointer transition-colors flex items-center gap-2 hover:text-zinc-400">
               Collection
@@ -35,15 +40,29 @@ export function Navbar() {
               </div>
             </div>
           </div>
-          <a href="#process" className="text-zinc-500 hover:text-white cursor-pointer transition-colors py-8">Process</a>
+
+          {/* Section Anchors */}
+          <a href="#process" className="text-zinc-500 hover:text-white cursor-pointer transition-colors py-8">
+            Process
+          </a>
+
+          <a href="#bundles" className="text-zinc-500 hover:text-white cursor-pointer transition-colors py-8">
+            Bundles
+          </a>
+
+          <a href="#sponsorship" className="text-zinc-500 hover:text-white cursor-pointer transition-colors py-8">
+            Sponsorship
+          </a>
         </div>
 
+         {/* Action Right Element Interfacing with Build Drawer
         <div className="group flex items-center gap-4 cursor-pointer">
           <div className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/70 group-hover:text-white">
             Cart <span className="text-zinc-600 group-hover:text-white ml-1">(0)</span>
           </div>
           <div className="w-8 h-[1px] bg-white/10 group-hover:w-12 group-hover:bg-white transition-all duration-500" />
-        </div>
+        </div>  */}
+
       </div>
     </nav>
   );
