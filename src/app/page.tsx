@@ -1,65 +1,90 @@
-import Image from "next/image";
+import { Navbar } from "@/components/Navbar";
+import { ProductGrid } from "@/components/ProductGrid";
+import { Process } from "@/components/Process";
+import { FadeIn } from "@/components/FadeIn";
+import { shopifyFetch } from "@/lib/shopify";
+import { Testimonials } from "@/components/Testimonials";
+import { Footer } from "@/components/Footer";
 
-export default function Home() {
+const getProductsQuery = `
+  query getProducts {
+    products(first: 6) {
+      edges {
+        node {
+          id
+          title
+          handle
+          images(first: 5) { 
+            edges {
+              node {
+                url
+              }
+            }
+          }
+          priceRange {
+            minVariantPrice {
+              amount
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export default async function Home() {
+  const response = await shopifyFetch({ query: getProductsQuery });
+  const rawProducts = response?.data?.products?.edges || [];
+  
+  // Clean duplicates by ID
+  const products = rawProducts.filter((v: any, i: any, a: any) => 
+    a.findIndex((t: any) => t.node.id === v.node.id) === i
+  );
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-black text-white pb-32">
+      <Navbar />
+
+      {/* Hero Section */}
+      <section className="relative h-[90vh] flex items-center px-10 overflow-hidden">
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+          <source src="/hero-carbon.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10" />
+        <div className="relative z-20 max-w-7xl mx-auto w-full">
+          <FadeIn>
+            <h1 className="text-7xl md:text-[10rem] font-black tracking-tighter uppercase italic leading-[0.8]">
+              KNDS AUTO
+            </h1>
+            <p className="text-zinc-400 tracking-[0.5em] text-[10px] uppercase mt-8 font-bold">
+              Automotive Grade Carbon Composites
+            </p>
+          </FadeIn>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </section>
+
+      {/* Featured Statement */}
+      <section className="max-w-7xl mx-auto px-10 pt-40 pb-20">
+        <FadeIn>
+          <div className="max-w-3xl">
+            <h2 className="text-[10px] font-bold tracking-[0.5em] uppercase text-zinc-600 mb-8 flex items-center gap-4">
+              <span className="w-12 h-[1px] bg-zinc-800"></span>
+              The Collection
+            </h2>
+            <p className="text-3xl md:text-5xl font-light leading-tight tracking-tighter italic">
+              We engineer <span className="text-zinc-500 underline decoration-zinc-800 underline-offset-8">tactile connections</span> between the driver and the machine.
+            </p>
+          </div>
+        </FadeIn>
+      </section>
+
+      {/* Products & Side-Panel Logic */}
+      <ProductGrid products={products} />
+
+      {/* Process & Mission */}
+      <Process />
+      <Testimonials />
+      <Footer />
+    </main>
   );
 }
